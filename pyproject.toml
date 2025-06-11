@@ -29,3 +29,6 @@ ipdb = "^0.13.13"
 pre-commit = "^3.7.0"
 mypy = "^1.10.0"
 isort = "^5.13.2"
+
+[tool.black]
+line-length = 79

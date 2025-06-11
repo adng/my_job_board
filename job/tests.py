@@ -1,9 +1,9 @@
-from django.test import TestCase
 import pytest
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework_api_key.models import APIKey
-from django.contrib.auth import get_user_model
+
 from job.models import Job
 
 
@@ -26,9 +26,22 @@ def api_client(api_key):
 def user(db):
     # Create a test user
     User = get_user_model()
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email="jobuser@example.com", password="pass1234"
     )
+    return user
+
+
+@pytest.fixture
+def obtain_token(user):
+    """Obtain JWT access token for the test user."""
+    client = APIClient()
+    url = reverse("token_obtain_pair")
+    response = client.post(
+        url, {"email": "jobuser@example.com", "password": "pass1234"}
+    )
+    assert response.status_code == 200
+    return response.data["access"]
 
 
 @pytest.mark.django_db
@@ -139,3 +152,53 @@ def test_job_delete(api_client, user):
     response = api_client.delete(url)
     assert response.status_code == 204
     assert not Job.objects.filter(id=job.id).exists()
+
+
+@pytest.mark.django_db
+def test_job_create_with_jwt(user, obtain_token):
+    """Test job creation endpoint with JWT access token."""
+    client = APIClient()
+    token = obtain_token
+    url = reverse("job-list-create")
+    data = {
+        "title": "JWT Job",
+        "location": "Remote",
+        "description": "Job with JWT",
+        "contract_type": "cdi",
+        "reference": "JWTREF",
+        "salary": 90000,
+    }
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+    response = client.post(url, data)
+    assert response.status_code == 201
+    assert Job.objects.filter(title="JWT Job").exists()
+
+
+@pytest.mark.django_db
+def test_job_update_with_jwt(user, obtain_token):
+    """Test job update endpoint with JWT access token."""
+    job = Job.objects.create(
+        title="JWT Job",
+        location="Paris",
+        description="Desc1",
+        contract_type="cdi",
+        reference="JWTREF",
+        salary=50000,
+        owner=user,
+    )
+    client = APIClient()
+    token = obtain_token
+    url = reverse("job-detail", args=[job.id])
+    data = {
+        "title": "JWT Updated Job",
+        "location": "Lyon",
+        "description": "Updated Desc JWT",
+        "contract_type": "cdd",
+        "reference": "JWTREF2",
+        "salary": 120000,
+    }
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+    response = client.put(url, data)
+    assert response.status_code == 200
+    job.refresh_from_db()
+    assert job.title == "JWT Updated Job"
