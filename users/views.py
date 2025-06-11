@@ -4,7 +4,8 @@ from rest_framework import exceptions, generics, serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework_api_key.permissions import HasAPIKey
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -13,6 +14,7 @@ from rest_framework_simplejwt.serializers import (
     TokenObtainPairSerializer,
     TokenRefreshSerializer,
 )
+from rest_framework_api_key.permissions import HasAPIKey
 
 from users.serializers import SignUpSerializer, EmailTokenObtainPairView
 
@@ -39,6 +41,28 @@ class SignUpView(generics.CreateAPIView):
             {"id": user.id, "email": user.email},
             status=status.HTTP_201_CREATED,
         )
+
+
+class SignOutView(APIView):
+    """
+    Sign out by blacklisting the refresh token.
+    """
+
+    permission_classes = (HasAPIKey,)
+
+    def post(self, request):
+        try:
+            refresh_token = request.data["refresh"]
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            return Response(
+                {"detail": "Signed out."}, status=status.HTTP_205_RESET_CONTENT
+            )
+        except Exception:
+            return Response(
+                {"detail": "Invalid token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):

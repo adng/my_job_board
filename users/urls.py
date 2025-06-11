@@ -12,6 +12,7 @@ from users.views import (
     SignUpView,
     EmailTokenObtainPairView,
     EmailTokenRefreshView,
+    SignOutView,
 )
 
 urlpatterns = [
@@ -22,4 +23,7 @@ urlpatterns = [
     path(
         "token/refresh/", EmailTokenRefreshView.as_view(), name="token_refresh"
     ),  # JWT refresh
+    path(
+        "signout/", SignOutView.as_view(), name="sign_out"
+    ),  # Sign out endpoint
 ]

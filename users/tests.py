@@ -20,6 +20,15 @@ def api_client(api_key):
     return client
 
 
+@pytest.fixture
+def user(db):
+    # Create a test user
+    User = get_user_model()
+    return User.objects.create_user(
+        email="testuser2@example.com", password="pass1234"
+    )
+
+
 @pytest.mark.django_db
 def test_signup_creates_user(api_client):
     """Test user registration."""
@@ -61,6 +70,7 @@ def test_signup_requires_api_key():
     response = client.post(
         url, {"email": "noapikey@example.com", "password": "pass"}
     )
+
     assert response.status_code == 401
 
 
@@ -104,3 +114,34 @@ def test_token_refresh(api_client):
     refresh_response = api_client.post(refresh_url, {"refresh": refresh_token})
     assert refresh_response.status_code == 200
     assert "access" in refresh_response.data
+
+
+@pytest.mark.django_db
+def test_signout_success(api_client):
+    """Test sign out (refresh token blacklist)."""
+    User = get_user_model()
+    email = "logoutuser@example.com"
+    password = "logoutpass123"
+    User.objects.create_user(email=email, password=password)
+    # Obtain tokens
+    obtain_url = reverse("token_obtain_pair")
+    obtain_response = api_client.post(
+        obtain_url, {"email": email, "password": password}
+    )
+    refresh_token = obtain_response.data["refresh"]
+    # Sign out
+    signout_url = reverse("sign_out")
+    api_client.force_authenticate(user=User.objects.get(email=email))
+    response = api_client.post(signout_url, {"refresh": refresh_token})
+    assert response.status_code == 205
+    assert response.data["detail"] == "Signed out."
+
+
+@pytest.mark.django_db
+def test_signout_invalid_token(api_client, user):
+    """Test sign out with invalid refresh token."""
+    api_client.force_authenticate(user=user)
+    signout_url = reverse("sign_out")
+    response = api_client.post(signout_url, {"refresh": "invalidtoken"})
+    assert response.status_code == 400
+    assert "detail" in response.data
