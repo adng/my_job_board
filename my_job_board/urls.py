@@ -19,6 +19,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("users/", include("users.urls")),
+    path("admin/", admin.site.urls),  # Admin panel
+    path("users/", include("users.urls")),  # User endpoints
+    path("api/", include("job.urls")),  # Job board endpoints
 ]

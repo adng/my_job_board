@@ -6,8 +6,12 @@ from users.models import User
 
 
 class SignUpSerializer(serializers.Serializer):
-    email = serializers.EmailField(write_only=True)
-    password = serializers.CharField(write_only=True)
+    """
+    Serializer for user registration.
+    """
+
+    email = serializers.EmailField(write_only=True)  # User email
+    password = serializers.CharField(write_only=True)  # User password
 
     def validate_email(self, value):
         User = get_user_model()

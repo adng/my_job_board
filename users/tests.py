@@ -1,19 +1,20 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
 from rest_framework.test import APIClient
 from rest_framework_api_key.models import APIKey
 
 
 @pytest.fixture
 def api_key():
+    # Create API key for test client
     _, key = APIKey.objects.create_key(name="test-key")
     return key
 
 
 @pytest.fixture
 def api_client(api_key):
+    # API client with API key
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f"Api-Key {api_key}")
     return client
@@ -21,6 +22,7 @@ def api_client(api_key):
 
 @pytest.mark.django_db
 def test_signup_creates_user(api_client):
+    """Test user registration."""
     url = reverse("sign_up")
     email = "testuser@example.com"
     response = api_client.post(url, {"email": email, "password": "pass1234"})
@@ -31,6 +33,7 @@ def test_signup_creates_user(api_client):
 
 @pytest.mark.django_db
 def test_signup_duplicate_email(api_client):
+    """Test duplicate email registration."""
     url = reverse("sign_up")
     email = "dupe@example.com"
     password = "pass1234"
@@ -42,6 +45,7 @@ def test_signup_duplicate_email(api_client):
 
 @pytest.mark.django_db
 def test_signup_invalid_email(api_client):
+    """Test invalid email registration."""
     url = reverse("sign_up")
     response = api_client.post(
         url, {"email": "not-an-email", "password": "pass"}
@@ -51,6 +55,7 @@ def test_signup_invalid_email(api_client):
 
 @pytest.mark.django_db
 def test_signup_requires_api_key():
+    """Test registration without API key."""
     client = APIClient()
     url = reverse("sign_up")
     response = client.post(
@@ -61,6 +66,7 @@ def test_signup_requires_api_key():
 
 @pytest.mark.django_db
 def test_token_obtain_pair_success(api_client):
+    """Test JWT token obtain with valid credentials."""
     User = get_user_model()
     email = "jwtuser@example.com"
     password = "jwtpass123"
@@ -74,6 +80,7 @@ def test_token_obtain_pair_success(api_client):
 
 @pytest.mark.django_db
 def test_token_obtain_pair_invalid_credentials(api_client):
+    """Test JWT token obtain with invalid credentials."""
     url = reverse("token_obtain_pair")
     response = api_client.post(
         url, {"email": "wrong@example.com", "password": "wrongpass"}
@@ -83,6 +90,7 @@ def test_token_obtain_pair_invalid_credentials(api_client):
 
 @pytest.mark.django_db
 def test_token_refresh(api_client):
+    """Test JWT token refresh."""
     User = get_user_model()
     email = "refreshuser@example.com"
     password = "refreshpass123"

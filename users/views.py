@@ -5,56 +5,61 @@ from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework_api_key.permissions import HasAPIKey
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
+from rest_framework_simplejwt.serializers import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer,
+)
 
 from users.serializers import SignUpSerializer, EmailTokenObtainPairView
 
 
-class SignUpView(generics.GenericAPIView):
+class SignUpView(generics.CreateAPIView):
+    """
+    Register a new user.
+    """
+
     serializer_class = SignUpSerializer
     permission_classes = (AllowAny, HasAPIKey)
 
-    def post(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        try:
-            serializer.is_valid(raise_exception=True)
+        User = get_user_model()
+        user = User.objects.create_user(
+            email=serializer.validated_data["email"],
+            password=serializer.validated_data["password"],
+        )
 
-            User = get_user_model()
-            User.objects.create_user(
-                email=serializer.validated_data["email"],
-                password=serializer.validated_data["password"],
-            )
+        return Response(
+            {"id": user.id, "email": user.email},
+            status=status.HTTP_201_CREATED,
+        )
 
-            return Response(status=status.HTTP_201_CREATED)
-        except serializers.ValidationError:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    JWT token serializer using email.
+    """
+
+    username_field = "email"
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
-    serializer_class = EmailTokenObtainPairView
+    """
+    Obtain JWT token with email/password.
+    """
+
+    serializer_class = EmailTokenObtainPairSerializer
 
 
-# class LogInView(generics.GenericAPIView):
-#     serializer_class = EmailSerializer
-#     permission_classes = (AllowAny, HasAPIKey)
+class EmailTokenRefreshView(TokenRefreshView):
+    """
+    Refresh JWT token.
+    """
 
-#     def post(self, request: Request, *args, **kwargs) -> Response:
-#         serializer = self.get_serializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-
-#         user = self.authenticate(
-#             request=request, validated_data=serializer.validated_data
-#         )
-
-#         return Response(status=status.HTTP_200_OK)
-
-#     def authenticate(self, request, validated_data):
-#         user = authenticate(request=request, **validated_data)
-
-#         if user is None or not user.is_active:
-#             raise exceptions.AuthenticationFailed(
-#                 "Could not authenticate the user"
-#             )
-
-#         return user
+    serializer_class = TokenRefreshSerializer
