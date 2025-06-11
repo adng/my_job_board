@@ -41,6 +41,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "job",
     "users",
+    "rest_framework",
+    "rest_framework_api_key",
+    "rest_framework_simplejwt",
 ]
 
 MIDDLEWARE = [
@@ -128,4 +131,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
 AUTHENTICATION_BACKENDS = [
     "users.auth_backends.EmailAuthBackend",
+    "django.contrib.auth.backends.ModelBackend",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+}
